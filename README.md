@@ -1,12 +1,32 @@
 # AI Model Server Scripts
 
-These shell scripts start various AI model serving containers (DiffusionGemma, DeepSeek, FLUX, GPT-OSS 120B).
+This directory contains a set of shell scripts that each launch a Docker
+container serving a particular AI model on this host (an NVIDIA GB10 / DGX Spark
+"Grace Blackwell" machine). Each script picks the serving stack best suited to
+its model, wires up the GPU, mounts the shared Hugging Face cache, and exposes
+an endpoint (an OpenAI-compatible HTTP API or a web UI) you can talk to.
+
+## Available scripts
+
+| Script | Model | Stack | Endpoint (host) | Notes |
+| --- | --- | --- | --- | --- |
+| `qwen2.5b-start.sh` | `Qwen/Qwen2.5-3B-Instruct` | SGLang | `http://localhost:30001` | Small fp8 chat LLM, OpenAI-compatible API |
+| `deepseek-start.sh` | `deepseek-ai/DeepSeek-R1-Distill-Qwen-32B` | SGLang | `http://localhost:30000` | Reasoning chat LLM, OpenAI-compatible API |
+| `gptoss120b-start.sh` | `openai/gpt-oss-120b` | vLLM | OpenAI-compatible API | Uses the Harmony response format / tool-call parser |
+| `diffusiongemma-start.sh` | `google/diffusiongemma-26B-A4B-it` | vLLM | OpenAI-compatible API | Served with vLLM per Google's model card |
+| `flux-start.sh` | Black Forest Labs `FLUX.2 [dev]` | ComfyUI | `http://localhost:8188` | Diffusion **image** model; web UI + HTTP API |
+| `canary-qwen2.5b-start.sh` | `nvidia/canary-qwen-2.5b` | NeMo + Gradio | `http://localhost:7860` | English **speech-to-text (ASR)**, NOT a chat LLM |
+
+Each script prints, on startup, the exact `docker logs -f <name>` command to
+follow the container as it downloads weights and warms up.
 
 ## Configuration
 
-All scripts expect a **.env** file in the same directory (`SCRIPT_DIR`). The .env file should define any secrets required by the scripts, currently:
+All scripts expect a **.env** file in the same directory (`SCRIPT_DIR`). The
+.env file should define any secrets required by the scripts, currently:
 
-- `HF_TOKEN` – Your Hugging Face authentication token, needed to download gated models and to authenticate container runs.
+- `HF_TOKEN` – Your Hugging Face authentication token, needed to download gated
+  models and to authenticate container runs.
 
 Create the file:
 
@@ -20,22 +40,26 @@ Edit `.env` and set `HF_TOKEN` to your token:
 HF_TOKEN=hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ```
 
-The scripts automatically load this file and export the variables before executing.
+The scripts automatically load this file and export the variables before
+executing.
 
 ## Usage
 
 ```sh
+./qwen2.5b-start.sh         # Start Qwen2.5-3B-Instruct SGLang server
+./deepseek-start.sh         # Start DeepSeek-R1-Distill-Qwen-32B SGLang server
+./gptoss120b-start.sh       # Start GPT-OSS 120B vLLM server
 ./diffusiongemma-start.sh   # Start DiffusionGemma vLLM server
-./deepseek-start.sh        # Start DeepSeek SGLang server
-./flux-start.sh            # Start FLUX ComfyUI server
-./gptoss120b-start.sh      # Start GPT-OSS 120B vLLM server
+./flux-start.sh             # Start FLUX.2 ComfyUI server
+./canary-qwen2.5b-start.sh  # Start Canary-Qwen-2.5B ASR web UI
 ```
 
 Ensure Docker is running and you have permission to use the GPU.
 
 ## Security
 
-The `.env` file contains sensitive credentials and is **git‑ignored** by default. Do not commit it to version control.
+The `.env` file contains sensitive credentials and is **git‑ignored** by
+default. Do not commit it to version control.
 
 ---
 
